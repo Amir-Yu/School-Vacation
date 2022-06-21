@@ -132,7 +132,7 @@ class SchoolHolidays(Entity):
         now = datetime.date.today()
         if now.isoweekday() != 6:
             for extract_data in self.school_db:
-                if "HIGH" in extract_data.values():
+                if "HIGH" in extract_data:
                     start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
                     end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
                     if start == now < end:
