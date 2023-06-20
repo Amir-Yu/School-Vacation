@@ -17,7 +17,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 
-__version__ = '2.0.1'
+__version__ = '2.0.3'
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class SchoolHolidays(Entity):
         self._summary_name = None
         self._elementary_school_status = None
         self._high_school_status = None
-        self.create_db_file()
+        # self.create_db_file()
 
     @property
     def name(self):
@@ -109,7 +109,7 @@ class SchoolHolidays(Entity):
                 'summary': self.get_summary_name,
             }
             self._state = await type_to_func[self.type]()
-            await self.async_update_ha_state()
+            self.async_write_ha_state()
         else:
             await self.create_db_file()
 
