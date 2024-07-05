@@ -4,7 +4,7 @@ Platform to get if is school vaction for Home Assistant.
 Document will come soon...
 """
 import logging
-import codecs
+import aiofiles
 import datetime
 import json
 import pathlib
@@ -17,7 +17,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 
-__version__ = '2.0.3'
+__version__ = '2.1.0'
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,9 +120,10 @@ class SchoolHolidays(Entity):
                 html = await fetch(session,
                                    'https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json')
                 data = json.loads(html)
-                with codecs.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
-                    json.dump(data, outfile, skipkeys=False, ensure_ascii=False,
-                              indent=4, separators=None, default=None, sort_keys=True)
+            async with aiofiles.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
+                temp_data = json.dumps(data, skipkeys=False, ensure_ascii=False, indent=4, separators=None,
+                                       default=None, sort_keys=True)
+                await outfile.write(temp_data)
             self.school_db = data
         except Exception as e:
             _LOGGER.error(e)
