@@ -16,6 +16,8 @@ from homeassistant.const import (CONF_RESOURCES)
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
+# Constants for multi-language support
+from lang import Lang
 
 __version__ = '2.1.0'
 
@@ -129,39 +131,39 @@ class SchoolHolidays(Entity):
             _LOGGER.error(e)
 
     async def is_vacation(self):
-        """Check if it is school day."""
-        now = datetime.date.today()
-        if now.isoweekday() != 6:
-            for extract_data in self.school_db:
-                if "HIGH" in extract_data:
-                    start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
-                    end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
-                    if start == now < end:
-                        self._summary_name = "חופש גדול - על יסודי"
-                        self._high_school_status = "True"
-                        self._elementary_school_status = "False"
-                        return True
-                else:
-                    start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
-                    end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
-                    if start == now < end:
-                        self._summary_name = str(extract_data['SUMMARY'])
-                        self._high_school_status = "True"
-                        self._elementary_school_status = "True"
-                        return True
-        elif now.isoweekday() == 6:
-            self._summary_name = "יום שבת"
-            self._high_school_status = "True"
-            self._elementary_school_status = "True"
-            return True
-        if self.elementary_school.__eq__("True") and now.isoweekday() == 5:
-            self._high_school_status = "True"
-            self._elementary_school_status = "False"
-            self._summary_name = "אין לימודים - על יסודי"
-            return True
-        self._high_school_status = "False"
+    """Check if it is school day."""
+    now = datetime.date.today()
+    if now.isoweekday() != 6:
+        for extract_data in self.school_db:
+            if "HIGH" in extract_data:
+                start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
+                end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
+                if start == now < end:
+                    self._summary_name = Lang.HIGH_SCHOOL_VACATION
+                    self._high_school_status = "True"
+                    self._elementary_school_status = "False"
+                    return True
+            else:
+                start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
+                end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
+                if start == now < end:
+                    self._summary_name = str(extract_data['SUMMARY'])
+                    self._high_school_status = "True"
+                    self._elementary_school_status = "True"
+                    return True
+    elif now.isoweekday() == 6:
+        self._summary_name = Lang.SATURDAY
+        self._high_school_status = "True"
+        self._elementary_school_status = "True"
+        return True
+    if self.elementary_school.__eq__("True") and now.isoweekday() == 5:
+        self._high_school_status = "True"
         self._elementary_school_status = "False"
-        self._summary_name = "יום לימודים"
+        self._summary_name = Lang.NO_SCHOOL_HIGH
+        return True
+    self._high_school_status = "False"
+    self._elementary_school_status = "False"
+    self._summary_name = Lang.SCHOOL_DAY
 
     async def get_summary_name(self):
         """Return the state of the sensor."""
