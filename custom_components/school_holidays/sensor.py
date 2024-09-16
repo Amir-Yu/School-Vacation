@@ -28,9 +28,11 @@ ELEMENTARY_SCHOOL = 'elementary_school'
 HIGH_SCHOOL = 'high_school'
 
 SENSOR_TYPES = {
-    'is_high_vacation': ['mdi:school', 'is_high_vacation'],
-    'is_elementary_vacation': ['mdi:school', 'is_elementary_vacation'],
-    'summary': ['mdi:rename-box', 'summary'],
+    'is_high_vacation_today': ['mdi:school', 'is_high_vacation_today'],
+    'is_elementary_vacation_today': ['mdi:school', 'is_elementary_vacation_today'],
+    'is_high_vacation_nextday': ['mdi:school', 'is_high_vacation_nextday'],
+    'is_elementary_vacation_nextday': ['mdi:school', 'is_elementary_vacation_nextday'],
+    'summary_today': ['mdi:rename-box', 'summary_today'],
 }
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
@@ -84,6 +86,8 @@ class SchoolHolidays(Entity):
         self._summary_name = None
         self._elementary_school_status = None
         self._high_school_status = None
+        self._elementary_school_next_day_status = None
+        self._high_school_next_day_status = None
         # self.create_db_file()
 
     @property
@@ -104,11 +108,14 @@ class SchoolHolidays(Entity):
     async def async_update(self):
         """Update our sensor state."""
         if self.school_db:
-            await self.is_vacation()
+            await self.is_vacation(datetime.date.today()) # today
+            await self.is_vacation(datetime.date.today() + datetime.timedelta(days=1)) # tomorrow 
             type_to_func = {
-                'is_high_vacation': self.get_high_school_status,
-                'is_elementary_vacation': self.get_elementary_school_status,
-                'summary': self.get_summary_name,
+                'is_high_vacation_today': self.get_high_school_status,
+                'is_elementary_vacation_today': self.get_elementary_school_status,
+                'is_high_vacation_nextday': self.get_high_school_nextday_status,
+                'is_elementary_vacation_nextday': self.get_elementary_school_nextday_status,
+                'summary_today': self.get_summary_name,
             }
             self._state = await type_to_func[self.type]()
             self.async_write_ha_state()
@@ -119,51 +126,75 @@ class SchoolHolidays(Entity):
         """Create the json db."""
         try:
             async with aiohttp.ClientSession() as session:
-                html = await fetch(session,
-                                   'https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json')
-                data = json.loads(html)
+                json = await fetch(session, 'https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json')
+                json_data = json.loads(json)
             async with aiofiles.open(self.config_path + 'school_data.json', 'w', encoding='utf-8') as outfile:
-                temp_data = json.dumps(data, skipkeys=False, ensure_ascii=False, indent=4, separators=None,
-                                       default=None, sort_keys=True)
+                temp_data = json.dumps(json_data, skipkeys=False, ensure_ascii=False, indent=4, separators=None, default=None, sort_keys=True)
                 await outfile.write(temp_data)
             self.school_db = data
         except Exception as e:
             _LOGGER.error(e)
 
-    async def is_vacation(self):
-    """Check if it is school day."""
-    now = datetime.date.today()
-    if now.isoweekday() != 6:
+    async def is_vacation(self, check_date=None):
+    """Check if it is a school day. If no date is provided, use today's date."""
+    # Use today's date if no date is provided
+    today = datetime.date.today();
+    current_date = check_date if check_date else today
+    
+    if current_date.isoweekday() != 6:
         for extract_data in self.school_db:
             if "HIGH" in extract_data:
                 start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
                 end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
-                if start == now < end:
-                    self._summary_name = Lang.HIGH_SCHOOL_VACATION
-                    self._high_school_status = "True"
-                    self._elementary_school_status = "False"
+                if start == current_date < end:
+                    if current_date == today:
+                        self._summary_name = Lang.HIGH_SCHOOL_VACATION
+                        self._high_school_status = "True"
+                        self._elementary_school_status = "False"
+                    else:
+                        self._high_school_nextday_status = "True"
+                        self._elementary_school_nextday_status = "False"
                     return True
             else:
                 start = datetime.datetime.strptime(str(extract_data['START']), '%Y%m%d').date()
                 end = datetime.datetime.strptime(str(extract_data['END']), '%Y%m%d').date()
-                if start == now < end:
-                    self._summary_name = str(extract_data['SUMMARY'])
-                    self._high_school_status = "True"
-                    self._elementary_school_status = "True"
+                if start == current_date < end:
+                    if current_date == today:
+                        self._summary_name = str(extract_data['SUMMARY'])
+                        self._high_school_status = "True"
+                        self._elementary_school_status = "True"
+                    else:
+                        self._high_school_nextday_status = "True"
+                        self._elementary_school_nextday_status = "True"
                     return True
-    elif now.isoweekday() == 6:
-        self._summary_name = Lang.SATURDAY
-        self._high_school_status = "True"
-        self._elementary_school_status = "True"
+    
+    elif current_date.isoweekday() == 6:
+        if current_date == today:
+            self._summary_name = Lang.SATURDAY
+            self._high_school_status = "True"
+            self._elementary_school_status = "True"
+        else:
+            self._high_school_nextday_status = "True"
+            self._elementary_school_nextday_status = "True"
         return True
-    if self.elementary_school.__eq__("True") and now.isoweekday() == 5:
-        self._high_school_status = "True"
+    
+    if self.elementary_school.__eq__("True") and current_date.isoweekday() == 5:
+        if current_date == today:
+            self._high_school_status = "True"
+            self._elementary_school_status = "False"
+            self._summary_name = Lang.NO_SCHOOL_HIGH
+        else:
+            self._high_school_nextday_status = "True"
+            self._elementary_school_nextday_status = "False"
+        return True
+
+    if current_date == today:
+        self._high_school_status = "False"
         self._elementary_school_status = "False"
-        self._summary_name = Lang.NO_SCHOOL_HIGH
-        return True
-    self._high_school_status = "False"
-    self._elementary_school_status = "False"
-    self._summary_name = Lang.SCHOOL_DAY
+        self._summary_name = Lang.SCHOOL_DAY
+    else:
+        self._high_school_nextday_status = "False"
+        self._elementary_school_nextday_status = "False"
 
     async def get_summary_name(self):
         """Return the state of the sensor."""
@@ -182,3 +213,15 @@ class SchoolHolidays(Entity):
         if self._high_school_status is None:
             self._high_school_status = "Error"
         return str(self._high_school_status)
+
+    async def get_elementary_school_nextday_status(self):
+        """Return the state of the sensor."""
+        if self._elementary_school_nextday_status is None:
+            self._elementary_school_nextday_status = "Error"
+        return str(self._elementary_school_nextday_status)
+
+    async def get_high_school_nextday_status(self):
+        """Return the state of the sensor."""
+        if self._high_school_nextday_status is None:
+            self._high_school_nextday_status = "Error"
+        return str(self._high_school_nextday_status)
