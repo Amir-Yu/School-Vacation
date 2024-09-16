@@ -154,7 +154,7 @@ class SchoolHolidays(Entity):
                     sort_keys=True,
                 )
                 await outfile.write(temp_data)
-            self.school_db = data
+            self.school_db = json_data
         except Exception as e:
             _LOGGER.error(e)
 
