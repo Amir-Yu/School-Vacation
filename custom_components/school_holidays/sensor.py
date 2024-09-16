@@ -136,11 +136,11 @@ class SchoolHolidays(Entity):
         """Create the json db."""
         try:
             async with aiohttp.ClientSession() as session:
-                json = await fetch(
+                web_res = await fetch(
                     session,
                     "https://raw.githubusercontent.com/rt400/School-Vacation/master/data.json",
                 )
-                json_data = json.loads(json)
+                json_data = json.loads(web_res)
             async with aiofiles.open(
                 self.config_path + "school_data.json", "w", encoding="utf-8"
             ) as outfile:
