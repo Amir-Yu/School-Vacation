@@ -18,7 +18,7 @@ from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 
 # Constants for multi-language support
-from lang import Lang
+from .lang import Lang
 
 __version__ = "2.1.0"
 
