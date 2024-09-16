@@ -13,7 +13,7 @@ example :
   alias: Set School Mode Off
   trigger: 
   - platform: state
-    entity_id: sensor.school_is_elementary_vacation
+    entity_id: sensor.school_is_elementary_vacation_today
     to: 'True'
   condition: []
   action:
@@ -32,9 +32,11 @@ example :
    elementary_school: True
    high_school: True
    resources:
-   - is_high_vacation
-   - is_elementary_vacation
-   - summary
+   - is_high_vacation_today
+   - is_elementary_vacation_today
+   - is_high_vacation_nextday
+   - is_elementary_vacation_nextday
+   - summary_today
   ```
   And if you want to use it with input_boolean here is the example to add to input_boolean.yaml file:
   ```python
@@ -51,7 +53,9 @@ example :
       resources:
       - is_high_vacation
       - is_elementary_vacation
-      - summary
+      - is_high_vacation_nextday
+      - is_elementary_vacation_nextday
+      - summary_today
   
   input_boolean:
     school_auto:
